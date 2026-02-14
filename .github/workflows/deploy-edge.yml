@@ -25,6 +25,12 @@ jobs:
       
       - name: Show supabase dir
         run: ls supabase/functions/test-function
+
+      - name: Debug tree
+        run: |
+          pwd
+          ls -la
+          ls -la supabase
   
       - name: Deploy Edge Functions
         run: supabase functions deploy test-function --project-ref $SUPABASE_PROJECT_ID --workdir .
