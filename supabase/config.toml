@@ -1,4 +1,4 @@
-project_id = "your-project-ref" # Bạn có thể để tạm ref của bạn ở đây hoặc dùng lệnh link
+project_id = "cfazavlfyigkuoylyrur" # Bạn có thể để tạm ref của bạn ở đây hoặc dùng lệnh link
 
 [api]
 port = 54321
