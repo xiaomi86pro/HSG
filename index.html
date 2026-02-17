@@ -56,9 +56,7 @@
   <h1>Generate Exam Test</h1>
 
   <div class="card">
-    <label>Template ID:</label>
-    <input type="number" id="templateId" value="1" />
-
+    
     <button onclick="generateExam()">Generate Exam</button>
 
     <pre id="result">Chưa có dữ liệu...</pre>
@@ -66,30 +64,30 @@
 
   <script>
     async function generateExam() {
-      const templateId = document.getElementById("templateId").value;
       const resultBox = document.getElementById("result");
-
       resultBox.textContent = "Đang tạo đề...";
 
       try {
-        const response = await fetch("/api/generate-exam", {
+        const response = await fetch("/api/generate_exam", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            template_id: Number(templateId)
+            user_id: "41b8cd6b-a213-4562-8ee2-5f1dee283704",
+            grade_level: 12
           })
         });
 
         const data = await response.json();
-
         resultBox.textContent = JSON.stringify(data, null, 2);
+
       } catch (error) {
         resultBox.textContent = "Lỗi: " + error.message;
       }
     }
   </script>
+
 
 </body>
 </html>
