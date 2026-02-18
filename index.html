@@ -60,33 +60,90 @@
     <button onclick="generateExam()">Generate Exam</button>
 
     <pre id="result">Chưa có dữ liệu...</pre>
+
+    <div id="examContainer" style="margin-top:20px;"></div>
+
   </div>
 
   <script>
-    async function generateExam() {
-      const resultBox = document.getElementById("result");
-      resultBox.textContent = "Đang tạo đề...";
+  async function generateExam() {
+    const resultBox = document.getElementById("result");
+    const examContainer = document.getElementById("examContainer");
 
-      try {
-        const response = await fetch("/api/generate_exam", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            user_id: "41b8cd6b-a213-4562-8ee2-5f1dee283704",
-            grade_level: 12
-          })
-        });
+    resultBox.textContent = "Đang tạo đề...";
+    examContainer.innerHTML = "";
 
-        const data = await response.json();
-        resultBox.textContent = JSON.stringify(data, null, 2);
+    try {
+      // 1️⃣ Generate exam
+      const genRes = await fetch("/api/generate_exam", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          user_id: "41b8cd6b-a213-4562-8ee2-5f1dee283704",
+          grade_level: 12
+        })
+      });
 
-      } catch (error) {
-        resultBox.textContent = "Lỗi: " + error.message;
+      const genData = await genRes.json();
+
+      if (!genData.exam_id) {
+        resultBox.textContent = JSON.stringify(genData, null, 2);
+        return;
       }
+
+      const examId = genData.exam_id;
+      resultBox.textContent = "Exam ID: " + examId;
+
+      // 2️⃣ Load exam details
+      const detailRes = await fetch(`/api/get_exam_details?exam_id=${examId}`);
+      const detailData = await detailRes.json();
+
+      renderExam(detailData);
+
+    } catch (error) {
+      resultBox.textContent = "Lỗi: " + error.message;
     }
-  </script>
+  }
+
+  function renderExam(data) {
+    const examContainer = document.getElementById("examContainer");
+    examContainer.innerHTML = "";
+
+    if (!data.questions || data.questions.length === 0) {
+      examContainer.innerHTML = "<p>Không có câu hỏi.</p>";
+      return;
+    }
+
+    data.questions.forEach((q, index) => {
+      const questionDiv = document.createElement("div");
+      questionDiv.style.marginBottom = "20px";
+
+      const title = document.createElement("h3");
+      title.textContent = `Câu ${index + 1}: ${q.question_text}`;
+      questionDiv.appendChild(title);
+
+      q.options.forEach(opt => {
+        const label = document.createElement("label");
+        label.style.display = "block";
+
+        const radio = document.createElement("input");
+        radio.type = "radio";
+        radio.name = `question_${q.question_id}`;
+        radio.value = opt.id;
+
+        label.appendChild(radio);
+        label.append(` ${opt.option_label}. ${opt.option_text}`);
+
+        questionDiv.appendChild(label);
+      });
+
+      examContainer.appendChild(questionDiv);
+    });
+  }
+</script>
+
 
 
 </body>
