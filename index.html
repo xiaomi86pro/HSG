@@ -66,6 +66,65 @@
   </div>
 
   <script>
+    const USER_ID = "41b8cd6b-a213-4562-8ee2-5f1dee283704";
+
+    async function checkUnsubmittedExam() {
+  const resultBox = document.getElementById("result");
+  const examContainer = document.getElementById("examContainer");
+
+  try {
+    const res = await fetch(
+      `/api/check_unsubmitted_exam?user_id=${USER_ID}`
+    );
+
+    const data = await res.json();
+
+    if (data.has_unsubmitted) {
+      resultBox.textContent =
+        "Bạn có bài thi đang làm dở.";
+
+      examContainer.innerHTML = `
+        <button onclick="resumeExam(${data.exam_id})">
+          Tiếp tục
+        </button>
+        <button onclick="cancelExam(${data.exam_id})"
+                style="margin-left:10px;">
+          Huỷ
+        </button>
+      `;
+    }
+
+  } catch (error) {
+    resultBox.textContent =
+      "Lỗi check exam: " + error.message;
+  }
+}
+
+async function resumeExam(examId) {
+  const res = await fetch(
+    `/api/get_exam_details?exam_id=${examId}`
+  );
+
+  const data = await res.json();
+  renderExam(data);
+}
+
+async function cancelExam(examId) {
+  const confirmCancel = confirm(
+    "Bạn chắc chắn muốn huỷ bài thi?"
+  );
+
+  if (!confirmCancel) return;
+
+  await fetch(`/api/cancel_exam`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ exam_id: examId })
+  });
+
+  location.reload();
+}
+
   async function generateExam() {
     const resultBox = document.getElementById("result");
     const examContainer = document.getElementById("examContainer");
@@ -200,6 +259,10 @@
     resultBox.textContent = "Lỗi submit: " + error.message;
   }
 }
+
+window.onload = function () {
+  checkUnsubmittedExam();
+};
 
 
 </script>
