@@ -141,7 +141,67 @@
 
       examContainer.appendChild(questionDiv);
     });
+
+    // Add Submit Button
+    const submitBtn = document.createElement("button");
+    submitBtn.textContent = "Submit Exam";
+    submitBtn.style.marginTop = "20px";
+    submitBtn.onclick = () => submitExam(data.exam_id, data.questions);
+
+    examContainer.appendChild(submitBtn);
   }
+
+  async function submitExam(examId, questions) {
+  const resultBox = document.getElementById("result");
+
+  const answers = [];
+
+  for (const q of questions) {
+    const selected = document.querySelector(
+      `input[name="question_${q.question_id}"]:checked`
+    );
+
+    if (!selected) {
+      alert("Bạn phải chọn đáp án cho tất cả các câu.");
+      return;
+    }
+
+    answers.push({
+      question_id: q.question_id,
+      selected_option_id: parseInt(selected.value)
+    });
+  }
+
+  try {
+    const res = await fetch("/api/submit_exam", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        exam_id: examId,
+        answers: answers
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      resultBox.textContent = JSON.stringify(data, null, 2);
+      return;
+    }
+
+    resultBox.textContent =
+      `Điểm: ${data.score} / ${data.total}`;
+
+    alert("Nộp bài thành công!");
+
+  } catch (error) {
+    resultBox.textContent = "Lỗi submit: " + error.message;
+  }
+}
+
+
 </script>
 
 
