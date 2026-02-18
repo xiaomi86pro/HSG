@@ -250,14 +250,71 @@ async function cancelExam(examId) {
       return;
     }
 
-    resultBox.textContent =
-      `Điểm: ${data.score} / ${data.total}`;
+    alert(`Điểm: ${data.score} / ${data.total}`);
 
-    alert("Nộp bài thành công!");
+    loadReview(examId)
 
   } catch (error) {
     resultBox.textContent = "Lỗi submit: " + error.message;
   }
+}
+
+async function loadReview(examId) {
+  const res = await fetch(
+    `/api/get_exam_review?exam_id=${examId}`
+  );
+
+  const data = await res.json();
+
+  renderReview(data);
+}
+
+function renderReview(data) {
+  const examContainer = document.getElementById("examContainer");
+  examContainer.innerHTML = "";
+
+  data.questions.forEach((q, index) => {
+    const questionDiv = document.createElement("div");
+    questionDiv.style.marginBottom = "20px";
+
+    const title = document.createElement("h3");
+    title.textContent = `Câu ${index + 1}: ${q.question_text}`;
+    questionDiv.appendChild(title);
+
+    q.options.forEach(opt => {
+      const label = document.createElement("label");
+      label.style.display = "block";
+
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.disabled = true;
+      radio.checked = opt.is_selected;
+
+      // Highlight logic
+      if (opt.is_correct) {
+        label.style.color = "green";
+      }
+
+      if (opt.is_selected && !opt.is_correct) {
+        label.style.color = "red";
+      }
+
+      label.appendChild(radio);
+      label.append(` ${opt.option_label}. ${opt.option_text}`);
+
+      questionDiv.appendChild(label);
+    });
+
+    if (q.explanation) {
+      const explanation = document.createElement("p");
+      explanation.textContent =
+        "Giải thích: " + q.explanation;
+      explanation.style.fontStyle = "italic";
+      questionDiv.appendChild(explanation);
+    }
+
+    examContainer.appendChild(questionDiv);
+  });
 }
 
 window.onload = function () {
