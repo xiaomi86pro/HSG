@@ -56,6 +56,19 @@
   <h1>Generate Exam Test</h1>
 
   <div class="card">
+    <div id="authSection">
+    <h3>Đăng nhập / Đăng ký</h3>
+    <input id="email" placeholder="Email" />
+    <input id="password" type="password" placeholder="Password" />
+    <button onclick="signUp()">Register</button>
+    <button onclick="signIn()">Login</button>
+  </div>
+
+  <div id="userInfo" style="display:none;">
+    <p id="userEmail"></p>
+    <button onclick="signOut()">Logout</button>
+  </div>
+
     
     <button onclick="generateExam()">Generate Exam</button>
 
@@ -65,8 +78,68 @@
 
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script>
-    const USER_ID = "41b8cd6b-a213-4562-8ee2-5f1dee283704";
+    const SUPABASE_URL = "https://cfazavlfyigkuoylyrur.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmYXphdmxmeWlna3VveWx5cnVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NjcwOTgsImV4cCI6MjA4NjU0MzA5OH0.G3QfbM7S3hABaVpbpBwQlRjgd1Ri5SS9StirEF4e4Ko";
+
+    const supabaseClient = supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY
+    );
+
+    async function signUp() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const { error } = await supabaseClient.auth.signUp({
+    email,
+    password
+  });
+
+  if (error) {
+    alert(error.message);
+  } else {
+    alert("Đăng ký thành công. Kiểm tra email xác nhận.");
+  }
+}
+
+async function signIn() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    alert(error.message);
+  } else {
+    handleSession(data.session);
+  }
+}
+
+async function signOut() {
+  await supabaseClient.auth.signOut();
+  location.reload();
+}
+
+function handleSession(session) {
+  if (!session) return;
+
+  document.getElementById("authSection").style.display = "none";
+  document.getElementById("userInfo").style.display = "block";
+  document.getElementById("userEmail").textContent =
+    "Logged in as: " + session.user.email;
+
+  window.CURRENT_USER_ID = session.user.id;
+
+  checkUnsubmittedExam();
+}
+
+   // const USER_ID = "41b8cd6b-a213-4562-8ee2-5f1dee283704";
 
     async function checkUnsubmittedExam() {
   const resultBox = document.getElementById("result");
@@ -74,7 +147,7 @@
 
   try {
     const res = await fetch(
-      `/api/check_unsubmitted_exam?user_id=${USER_ID}`
+      `/api/check_unsubmitted_exam?user_id=${window.CURRENT_USER_ID}`
     );
 
     const data = await res.json();
@@ -126,6 +199,10 @@ async function cancelExam(examId) {
 }
 
   async function generateExam() {
+    if (!window.CURRENT_USER_ID) {
+  alert("Bạn cần đăng nhập trước.");
+  return;
+}
     const resultBox = document.getElementById("result");
     const examContainer = document.getElementById("examContainer");
 
@@ -140,7 +217,7 @@ async function cancelExam(examId) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          user_id: "41b8cd6b-a213-4562-8ee2-5f1dee283704",
+          user_id: window.CURRENT_USER_ID,
           grade_level: 12
         })
       });
@@ -317,9 +394,14 @@ function renderReview(data) {
   });
 }
 
-window.onload = function () {
-  checkUnsubmittedExam();
+window.onload = async function () {
+  const { data } = await supabaseClient.auth.getSession();
+
+  if (data.session) {
+    handleSession(data.session);
+  }
 };
+
 
 
 </script>
