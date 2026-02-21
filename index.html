@@ -44,6 +44,11 @@
     <button onclick="generateExam()">Generate Exam</button>
     <button onclick="loadHistory()">View History</button>
     <button onclick="logout()">Logout</button>
+     <div id="pending-exam-section" class="section hidden">
+      <h3>Exam chưa nộp</h3>
+      <p id="pending-exam-text"></p>
+      <button onclick="resumePendingExam()">Làm tiếp</button>
+    </div>
   </div>
 
   <!-- EXAM SECTION -->
@@ -96,6 +101,7 @@ function setState(state) {
 function goHome() {
   currentExamId = null;
   setState("home");
+  loadPendingExam();
 }
 
 /* ===============================
@@ -118,6 +124,7 @@ async function login() {
 
   currentUser = data.user;
   setState("home");
+  loadPendingExam();
 }
 
 async function logout() {
@@ -151,8 +158,48 @@ async function generateExam() {
     currentExamId = data.exam_id;
     loadExam(currentExamId);
   } else {
+    if (data.error === "Unsubmitted exam exists") {
+      await loadPendingExam();
+    }
     alert(data.error || "Error generating exam");
   }
+}
+
+async function loadPendingExam() {
+  const pendingSection = document.getElementById("pending-exam-section");
+  const pendingText = document.getElementById("pending-exam-text");
+
+  const { data: { session } } = await sbClient.auth.getSession();
+  if (!session) {
+    pendingSection.classList.add("hidden");
+    return;
+  }
+
+  const res = await fetch("/api/check_unsubmitted_exam", {
+    headers: {
+      "Authorization": `Bearer ${session.access_token}`
+    }
+  });
+
+  const data = await res.json();
+
+  if (res.ok && data.has_unsubmitted && data.exam_id) {
+    currentExamId = data.exam_id;
+    pendingText.innerText = `Bạn đang có Exam #${data.exam_id} chưa submit.`;
+    pendingSection.classList.remove("hidden");
+    return;
+  }
+
+  pendingSection.classList.add("hidden");
+}
+
+function resumePendingExam() {
+  if (!currentExamId) {
+    alert("Không tìm thấy exam chưa submit.");
+    return;
+  }
+
+  loadExam(currentExamId);
 }
 
 /* ===============================
@@ -235,6 +282,7 @@ async function submitExam() {
 
   if (data.score !== undefined) {
     renderResult(data);
+    document.getElementById("pending-exam-section").classList.add("hidden");
     setState("result");
   } else {
     alert(data.error || "Submit error");
@@ -294,6 +342,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   if (data.session) {
     currentUser = data.session.user;
     setState("home");
+    loadPendingExam();
   } else {
     setState("auth");
   }
