@@ -157,8 +157,21 @@ async function generateExam() {
 async function loadExam(examId) {
   setState("exam");
 
-  const res = await fetch(`/api/get_exam_details?exam_id=${examId}`);
+  const { data: { session } } = await sbClient.auth.getSession();
+
+  const res = await fetch(`/api/get_exam_details?exam_id=${examId}`, {
+    headers: {
+      "Authorization": `Bearer ${session?.access_token ?? ""}`
+    }
+  });
+
   const data = await res.json();
+
+  if (!res.ok || !Array.isArray(data.questions)) {
+    document.getElementById("exam-container").innerHTML = "Failed to load exam.";
+    alert(data.error || "Error loading exam");
+    return;
+  }
 
   renderExam(data);
 }
@@ -190,6 +203,8 @@ function renderExam(data) {
 async function submitExam() {
   const answers = [];
 
+  const { data: { session } } = await sbClient.auth.getSession();
+
   document.querySelectorAll("input[type=radio]:checked")
     .forEach(input => {
       const questionId = input.name.replace("q-", "");
@@ -201,7 +216,10 @@ async function submitExam() {
 
   const res = await fetch("/api/submit_exam", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session?.access_token ?? ""}`
+    },
     body: JSON.stringify({
       exam_id: currentExamId,
       answers
@@ -236,11 +254,16 @@ function renderResult(data) {
 async function loadHistory() {
   setState("history");
 
+  const { data: { session } } = await sbClient.auth.getSession();
+
   const container = document.getElementById("history-container");
   container.innerHTML = "Loading history...";
 
-  const res = await fetch(`/api/get_user_exams?user_id=${currentUser.id}`);
-  const data = await res.json();
+  const res = await fetch(`/api/get_user_exams`, {
+      headers: {
+        "Authorization": `Bearer ${session?.access_token ?? ""}`
+      }
+    });  const data = await res.json();
 
   if (!data.exams) {
     container.innerHTML = "No history found";
