@@ -8,6 +8,20 @@
     .section { margin-top: 20px; }
     button { margin: 5px 0; }
   </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+    let supabase = null;
+
+    async function initSupabase() {
+      const res = await fetch("/api/env");
+      const env = await res.json();
+
+      supabase = window.supabase.createClient(
+        env.supabaseUrl,
+        env.supabaseAnonKey
+      );
+    }
+    </script>
 </head>
 <body>
 
@@ -51,6 +65,7 @@
   </div>
 
 <script>
+
 /* ===============================
    GLOBAL STATE
 ================================ */
@@ -83,23 +98,22 @@ async function login() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  const res = await fetch("/api/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password })
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password
   });
 
-  const data = await res.json();
-
-  if (data.user) {
-    currentUser = data.user;
-    setState("home");
-  } else {
-    alert("Login failed");
+  if (error) {
+    alert(error.message);
+    return;
   }
+
+  currentUser = data.user;
+  setState("home");
 }
 
-function logout() {
+async function logout() {
+  await supabase.auth.signOut();
   currentUser = null;
   currentExamId = null;
   setState("auth");
@@ -220,6 +234,21 @@ async function loadHistory() {
   setState("history");
   document.getElementById("history-container").innerHTML = "Loading history...";
 }
+
+async function bootstrap() {
+  await initSupabase();
+
+  const { data } = await supabase.auth.getSession();
+
+  if (data.session) {
+    currentUser = data.session.user;
+    setState("home");
+  } else {
+    setState("auth");
+  }
+}
+
+bootstrap();
 
 </script>
 
