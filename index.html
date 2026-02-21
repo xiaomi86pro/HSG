@@ -127,11 +127,15 @@ async function logout() {
 ================================ */
 
 async function generateExam() {
+  const { data: { session } } = await sbClient.auth.getSession();
+
   const res = await fetch("/api/generate_exam", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`
+    },
     body: JSON.stringify({
-      user_id: currentUser.id,
       grade_level: 12
     })
   });
@@ -144,10 +148,6 @@ async function generateExam() {
   } else {
     alert(data.error || "Error generating exam");
   }
-}
-
-function goHome() {
-  setState("home");
 }
 
 /* ===============================
