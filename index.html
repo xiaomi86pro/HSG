@@ -93,6 +93,11 @@ function setState(state) {
   document.getElementById(state + "-section").classList.remove("hidden");
 }
 
+function goHome() {
+  currentExamId = null;
+  setState("home");
+}
+
 /* ===============================
    AUTH
 ================================ */
