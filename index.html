@@ -1,412 +1,227 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
   <meta charset="UTF-8" />
-  <title>Generate Exam</title>
+  <title>Exam System</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 40px;
-      background: #f4f6f8;
-    }
-
-    h1 {
-      margin-bottom: 20px;
-    }
-
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-      max-width: 600px;
-    }
-
-    button {
-      padding: 10px 16px;
-      background: #0070f3;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      opacity: 0.9;
-    }
-
-    pre {
-      background: #111;
-      color: #0f0;
-      padding: 15px;
-      overflow-x: auto;
-      border-radius: 6px;
-      margin-top: 20px;
-    }
-
-    input {
-      padding: 8px;
-      margin-bottom: 10px;
-      width: 100%;
-    }
+    .hidden { display: none; }
+    .section { margin-top: 20px; }
+    button { margin: 5px 0; }
   </style>
 </head>
 <body>
 
-  <h1>Generate Exam Test</h1>
+  <h1>Exam System</h1>
 
-  <div class="card">
-    <div id="authSection">
-    <h3>Đăng nhập / Đăng ký</h3>
-    <input id="email" placeholder="Email" />
-    <input id="password" type="password" placeholder="Password" />
-    <button onclick="signUp()">Register</button>
-    <button onclick="signIn()">Login</button>
+  <!-- AUTH SECTION -->
+  <div id="auth-section" class="section">
+    <h2>Login</h2>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
   </div>
 
-  <div id="userInfo" style="display:none;">
-    <p id="userEmail"></p>
-    <button onclick="signOut()">Logout</button>
-  </div>
-
-    
+  <!-- HOME SECTION -->
+  <div id="home-section" class="section hidden">
+    <h2>Dashboard</h2>
     <button onclick="generateExam()">Generate Exam</button>
-
-    <pre id="result">Chưa có dữ liệu...</pre>
-
-    <div id="examContainer" style="margin-top:20px;"></div>
-
+    <button onclick="loadHistory()">View History</button>
+    <button onclick="logout()">Logout</button>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- EXAM SECTION -->
+  <div id="exam-section" class="section hidden">
+    <h2>Exam</h2>
+    <div id="exam-container">Loading exam...</div>
+    <button onclick="submitExam()">Submit</button>
+  </div>
 
-  <script>
-    const SUPABASE_URL = "https://cfazavlfyigkuoylyrur.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmYXphdmxmeWlna3VveWx5cnVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NjcwOTgsImV4cCI6MjA4NjU0MzA5OH0.G3QfbM7S3hABaVpbpBwQlRjgd1Ri5SS9StirEF4e4Ko";
+  <!-- RESULT SECTION -->
+  <div id="result-section" class="section hidden">
+    <h2>Result</h2>
+    <div id="result-container"></div>
+    <button onclick="goHome()">Back to Home</button>
+  </div>
 
-    const supabaseClient = supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_ANON_KEY
-    );
+  <!-- HISTORY SECTION -->
+  <div id="history-section" class="section hidden">
+    <h2>Exam History</h2>
+    <div id="history-container"></div>
+    <button onclick="goHome()">Back to Home</button>
+  </div>
 
-    async function signUp() {
+<script>
+/* ===============================
+   GLOBAL STATE
+================================ */
+
+let currentState = "auth";
+let currentUser = null;
+let currentExamId = null;
+
+/* ===============================
+   STATE MANAGEMENT
+================================ */
+
+function setState(state) {
+  currentState = state;
+
+  document.getElementById("auth-section").classList.add("hidden");
+  document.getElementById("home-section").classList.add("hidden");
+  document.getElementById("exam-section").classList.add("hidden");
+  document.getElementById("result-section").classList.add("hidden");
+  document.getElementById("history-section").classList.add("hidden");
+
+  document.getElementById(state + "-section").classList.remove("hidden");
+}
+
+/* ===============================
+   AUTH
+================================ */
+
+async function login() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  const { error } = await supabaseClient.auth.signUp({
-    email,
-    password
+  const res = await fetch("/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
   });
-
-  if (error) {
-    alert(error.message);
-  } else {
-    alert("Đăng ký thành công. Kiểm tra email xác nhận.");
-  }
-}
-
-async function signIn() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password
-  });
-
-  if (error) {
-    alert(error.message);
-  } else {
-    handleSession(data.session);
-  }
-}
-
-async function signOut() {
-  await supabaseClient.auth.signOut();
-  location.reload();
-}
-
-function handleSession(session) {
-  if (!session) return;
-
-  document.getElementById("authSection").style.display = "none";
-  document.getElementById("userInfo").style.display = "block";
-  document.getElementById("userEmail").textContent =
-    "Logged in as: " + session.user.email;
-
-  window.CURRENT_USER_ID = session.user.id;
-
-  checkUnsubmittedExam();
-}
-
-   // const USER_ID = "41b8cd6b-a213-4562-8ee2-5f1dee283704";
-
-    async function checkUnsubmittedExam() {
-  const resultBox = document.getElementById("result");
-  const examContainer = document.getElementById("examContainer");
-
-  try {
-    const res = await fetch(
-      `/api/check_unsubmitted_exam?user_id=${window.CURRENT_USER_ID}`
-    );
-
-    const data = await res.json();
-
-    if (data.has_unsubmitted) {
-      resultBox.textContent =
-        "Bạn có bài thi đang làm dở.";
-
-      examContainer.innerHTML = `
-        <button onclick="resumeExam(${data.exam_id})">
-          Tiếp tục
-        </button>
-        <button onclick="cancelExam(${data.exam_id})"
-                style="margin-left:10px;">
-          Huỷ
-        </button>
-      `;
-    }
-
-  } catch (error) {
-    resultBox.textContent =
-      "Lỗi check exam: " + error.message;
-  }
-}
-
-async function resumeExam(examId) {
-  const res = await fetch(
-    `/api/get_exam_details?exam_id=${examId}`
-  );
 
   const data = await res.json();
+
+  if (data.user) {
+    currentUser = data.user;
+    setState("home");
+  } else {
+    alert("Login failed");
+  }
+}
+
+function logout() {
+  currentUser = null;
+  currentExamId = null;
+  setState("auth");
+}
+
+/* ===============================
+   HOME ACTIONS
+================================ */
+
+async function generateExam() {
+  const res = await fetch("/api/generate_exam", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: currentUser.id,
+      grade_level: 12
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.exam_id) {
+    currentExamId = data.exam_id;
+    loadExam(currentExamId);
+  } else {
+    alert(data.error || "Error generating exam");
+  }
+}
+
+function goHome() {
+  setState("home");
+}
+
+/* ===============================
+   LOAD EXAM
+================================ */
+
+async function loadExam(examId) {
+  setState("exam");
+
+  const res = await fetch(`/api/get_exam_details?exam_id=${examId}`);
+  const data = await res.json();
+
   renderExam(data);
 }
 
-async function cancelExam(examId) {
-  const confirmCancel = confirm(
-    "Bạn chắc chắn muốn huỷ bài thi?"
-  );
+function renderExam(data) {
+  const container = document.getElementById("exam-container");
+  container.innerHTML = "";
 
-  if (!confirmCancel) return;
-
-  await fetch(`/api/cancel_exam`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ exam_id: examId })
+  data.questions.forEach(q => {
+    const div = document.createElement("div");
+    div.innerHTML = `
+      <p><b>${q.question_order}. ${q.question_text}</b></p>
+      ${q.options.map(o => `
+        <label>
+          <input type="radio" name="q-${q.question_id}" value="${o.id}">
+          ${o.option_label}. ${o.option_text}
+        </label><br>
+      `).join("")}
+      <hr>
+    `;
+    container.appendChild(div);
   });
-
-  location.reload();
 }
 
-  async function generateExam() {
-    if (!window.CURRENT_USER_ID) {
-  alert("Bạn cần đăng nhập trước.");
-  return;
-}
-    const resultBox = document.getElementById("result");
-    const examContainer = document.getElementById("examContainer");
+/* ===============================
+   SUBMIT
+================================ */
 
-    resultBox.textContent = "Đang tạo đề...";
-    examContainer.innerHTML = "";
-
-    try {
-      // 1️⃣ Generate exam
-      const genRes = await fetch("/api/generate_exam", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          user_id: window.CURRENT_USER_ID,
-          grade_level: 12
-        })
-      });
-
-      const genData = await genRes.json();
-
-      if (!genData.exam_id) {
-        resultBox.textContent = JSON.stringify(genData, null, 2);
-        return;
-      }
-
-      const examId = genData.exam_id;
-      resultBox.textContent = "Exam ID: " + examId;
-
-      // 2️⃣ Load exam details
-      const detailRes = await fetch(`/api/get_exam_details?exam_id=${examId}`);
-      const detailData = await detailRes.json();
-
-      renderExam(detailData);
-
-    } catch (error) {
-      resultBox.textContent = "Lỗi: " + error.message;
-    }
-  }
-
-  function renderExam(data) {
-    const examContainer = document.getElementById("examContainer");
-    examContainer.innerHTML = "";
-
-    if (!data.questions || data.questions.length === 0) {
-      examContainer.innerHTML = "<p>Không có câu hỏi.</p>";
-      return;
-    }
-
-    data.questions.forEach((q, index) => {
-      const questionDiv = document.createElement("div");
-      questionDiv.style.marginBottom = "20px";
-
-      const title = document.createElement("h3");
-      title.textContent = `Câu ${index + 1}: ${q.question_text}`;
-      questionDiv.appendChild(title);
-
-      q.options.forEach(opt => {
-        const label = document.createElement("label");
-        label.style.display = "block";
-
-        const radio = document.createElement("input");
-        radio.type = "radio";
-        radio.name = `question_${q.question_id}`;
-        radio.value = opt.id;
-
-        label.appendChild(radio);
-        label.append(` ${opt.option_label}. ${opt.option_text}`);
-
-        questionDiv.appendChild(label);
-      });
-
-      examContainer.appendChild(questionDiv);
-    });
-
-    // Add Submit Button
-    const submitBtn = document.createElement("button");
-    submitBtn.textContent = "Submit Exam";
-    submitBtn.style.marginTop = "20px";
-    submitBtn.onclick = () => submitExam(data.exam_id, data.questions);
-
-    examContainer.appendChild(submitBtn);
-  }
-
-  async function submitExam(examId, questions) {
-  const resultBox = document.getElementById("result");
-
+async function submitExam() {
   const answers = [];
 
-  for (const q of questions) {
-    const selected = document.querySelector(
-      `input[name="question_${q.question_id}"]:checked`
-    );
-
-    if (!selected) {
-      alert("Bạn phải chọn đáp án cho tất cả các câu.");
-      return;
-    }
-
-    answers.push({
-      question_id: q.question_id,
-      selected_option_id: parseInt(selected.value)
-    });
-  }
-
-  try {
-    const res = await fetch("/api/submit_exam", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        exam_id: examId,
-        answers: answers
-      })
+  document.querySelectorAll("input[type=radio]:checked")
+    .forEach(input => {
+      const questionId = input.name.replace("q-", "");
+      answers.push({
+        question_id: parseInt(questionId),
+        selected_option_id: parseInt(input.value)
+      });
     });
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      resultBox.textContent = JSON.stringify(data, null, 2);
-      return;
-    }
-
-    alert(`Điểm: ${data.score} / ${data.total}`);
-
-    loadReview(examId)
-
-  } catch (error) {
-    resultBox.textContent = "Lỗi submit: " + error.message;
-  }
-}
-
-async function loadReview(examId) {
-  const res = await fetch(
-    `/api/get_exam_review?exam_id=${examId}`
-  );
+  const res = await fetch("/api/submit_exam", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      exam_id: currentExamId,
+      answers
+    })
+  });
 
   const data = await res.json();
 
-  renderReview(data);
-}
-
-function renderReview(data) {
-  const examContainer = document.getElementById("examContainer");
-  examContainer.innerHTML = "";
-
-  data.questions.forEach((q, index) => {
-    const questionDiv = document.createElement("div");
-    questionDiv.style.marginBottom = "20px";
-
-    const title = document.createElement("h3");
-    title.textContent = `Câu ${index + 1}: ${q.question_text}`;
-    questionDiv.appendChild(title);
-
-    q.options.forEach(opt => {
-      const label = document.createElement("label");
-      label.style.display = "block";
-
-      const radio = document.createElement("input");
-      radio.type = "radio";
-      radio.disabled = true;
-      radio.checked = opt.is_selected;
-
-      // Highlight logic
-      if (opt.is_correct) {
-        label.style.color = "green";
-      }
-
-      if (opt.is_selected && !opt.is_correct) {
-        label.style.color = "red";
-      }
-
-      label.appendChild(radio);
-      label.append(` ${opt.option_label}. ${opt.option_text}`);
-
-      questionDiv.appendChild(label);
-    });
-
-    if (q.explanation) {
-      const explanation = document.createElement("p");
-      explanation.textContent =
-        "Giải thích: " + q.explanation;
-      explanation.style.fontStyle = "italic";
-      questionDiv.appendChild(explanation);
-    }
-
-    examContainer.appendChild(questionDiv);
-  });
-}
-
-window.onload = async function () {
-  const { data } = await supabaseClient.auth.getSession();
-
-  if (data.session) {
-    handleSession(data.session);
+  if (data.score !== undefined) {
+    renderResult(data);
+    setState("result");
+  } else {
+    alert(data.error || "Submit error");
   }
-};
+}
 
+/* ===============================
+   RESULT
+================================ */
 
+function renderResult(data) {
+  const container = document.getElementById("result-container");
+  container.innerHTML = `
+    <p>Score: ${data.score} / ${data.total}</p>
+  `;
+}
+
+/* ===============================
+   HISTORY (placeholder)
+================================ */
+
+async function loadHistory() {
+  setState("history");
+  document.getElementById("history-container").innerHTML = "Loading history...";
+}
 
 </script>
-
-
 
 </body>
 </html>
