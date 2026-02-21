@@ -33,57 +33,87 @@ export default async function handler(req: any, res: any) {
     }
 
     // 2️⃣ Get questions of exam
-    const { data: examQuestions } = await supabase
+    const { data: examQuestions, error: eqError } = await supabase
       .from('exam_questions')
       .select('question_id, question_order')
       .eq('exam_id', exam_id)
       .order('question_order', { ascending: true })
 
+    if (eqError) {
+      return res.status(500).json({ error: eqError.message })
+    }
+
+    if (!examQuestions || examQuestions.length === 0) {
+      return res.status(404).json({ error: 'No questions found for exam' })
+    }
+
     const questionIds = examQuestions.map(q => q.question_id)
 
     // 3️⃣ Get questions data
-    const { data: questions } = await supabase
+    const { data: questions, error: qError } = await supabase
       .from('questions')
       .select('id, question_text, explanation')
       .in('id', questionIds)
 
-    // 4️⃣ Get options (WITH is_correct)
-    const { data: options } = await supabase
+    if (qError) {
+      return res.status(500).json({ error: qError.message })
+    }
+
+    if (!questions) {
+      return res.status(500).json({ error: 'Failed to load questions' })
+    }
+
+    // 4️⃣ Get options
+    const { data: options, error: optError } = await supabase
       .from('options')
       .select('id, question_id, option_label, option_text, is_correct')
       .in('question_id', questionIds)
       .order('option_label', { ascending: true })
 
+    if (optError) {
+      return res.status(500).json({ error: optError.message })
+    }
+
+    if (!options) {
+      return res.status(500).json({ error: 'Failed to load options' })
+    }
+
     // 5️⃣ Get user answers
-    const { data: userAnswers } = await supabase
+    const { data: userAnswers, error: uaError } = await supabase
       .from('user_answers')
       .select('question_id, selected_option_id')
       .eq('exam_id', exam_id)
 
+    if (uaError) {
+      return res.status(500).json({ error: uaError.message })
+    }
+
+    const safeUserAnswers = userAnswers ?? []
+
     const formattedQuestions = examQuestions.map(eq => {
-      const question = questions.find(q => q.id === eq.question_id)
+    const question = questions.find(q => q.id === eq.question_id)
 
-      const questionOptions = options
-        .filter(opt => opt.question_id === eq.question_id)
-        .map(opt => {
-          const userAnswer = userAnswers.find(
-            ua => ua.question_id === eq.question_id
-          )
+    const questionOptions = options
+      .filter(opt => opt.question_id === eq.question_id)
+      .map(opt => {
+        const userAnswer = safeUserAnswers.find(
+          ua => ua.question_id === eq.question_id
+        )
 
-          return {
-            ...opt,
-            is_selected: userAnswer?.selected_option_id === opt.id
-          }
-        })
+        return {
+          ...opt,
+          is_selected: userAnswer?.selected_option_id === opt.id
+        }
+      })
 
-      return {
-        question_id: question?.id,
-        question_text: question?.question_text,
-        explanation: question?.explanation,
-        question_order: eq.question_order,
-        options: questionOptions
-      }
-    })
+    return {
+      question_id: question?.id,
+      question_text: question?.question_text,
+      explanation: question?.explanation,
+      question_order: eq.question_order,
+      options: questionOptions
+    }
+  })
 
     return res.status(200).json({
       exam_id: exam.id,
