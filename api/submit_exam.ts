@@ -1,13 +1,13 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { authenticateRequest, supabase } from './_auth'
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  const auth = await authenticateRequest(req)
+  if ('error' in auth) {
+    return res.status(auth.status).json({ error: auth.error })
   }
 
   const { exam_id, answers } = req.body
@@ -17,11 +17,12 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    // 1️⃣ Check exam exists & not submitted
+    // 1️⃣ Check exam exists, belongs to current user, and is not submitted
     const { data: exam, error: examError } = await supabase
       .from('exams')
       .select('id, submitted_at, total_questions')
       .eq('id', exam_id)
+      .eq('user_id', auth.userId)
       .single()
 
     if (examError || !exam) {
@@ -77,9 +78,7 @@ export default async function handler(req: any, res: any) {
     }
 
     // 3️⃣ Insert all answers
-    const { error: insertError } = await supabase
-      .from('user_answers')
-      .insert(inserts)
+    const { error: insertError } = await supabase.from('user_answers').insert(inserts)
 
     if (insertError) {
       return res.status(500).json({ error: 'Failed to save answers' })

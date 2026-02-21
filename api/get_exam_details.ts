@@ -1,13 +1,13 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { authenticateRequest, supabase } from './_auth'
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  const auth = await authenticateRequest(req)
+  if ('error' in auth) {
+    return res.status(auth.status).json({ error: auth.error })
   }
 
   const { exam_id } = req.query
@@ -17,11 +17,12 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    // 1️⃣ Check exam exists
+    // 1️⃣ Check exam exists and belongs to current user
     const { data: exam, error: examError } = await supabase
       .from('exams')
       .select('id, submitted_at')
       .eq('id', exam_id)
+      .eq('user_id', auth.userId)
       .single()
 
     if (examError || !exam) {

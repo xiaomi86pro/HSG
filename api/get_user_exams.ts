@@ -1,26 +1,24 @@
-import { createClient } from "@supabase/supabase-js";
+import { authenticateRequest, supabase } from './_auth'
 
-export default async function handler(req, res) {
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  export default async function handler(req: any, res: any) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
 
-  const { user_id } = req.query;
-
-  if (!user_id) {
-    return res.status(400).json({ error: "Missing user_id" });
+  const auth = await authenticateRequest(req)
+  if ('error' in auth) {
+    return res.status(auth.status).json({ error: auth.error })
   }
 
   const { data, error } = await supabase
-    .from("exams")
-    .select("id, score, total_questions, created_at, submitted_at")
-    .eq("user_id", user_id)
-    .order("created_at", { ascending: false });
+    .from('exams')
+    .select('id, score, total_questions, created_at, submitted_at')
+    .eq('user_id', auth.userId)
+    .order('created_at', { ascending: false })
 
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message })
   }
 
-  res.status(200).json({ exams: data });
+  return res.status(200).json({ exams: data })
 }
