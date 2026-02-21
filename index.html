@@ -8,10 +8,12 @@
     .section { margin-top: 20px; }
     button { margin: 5px 0; }
   </style>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <script>
-    let supabase = null;
+
+  <!-- Load Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    let supabase;
 
     async function initSupabase() {
       const res = await fetch("/api/env");
@@ -22,7 +24,7 @@
         env.supabaseAnonKey
       );
     }
-    </script>
+  </script>
 </head>
 <body>
 
@@ -249,7 +251,18 @@ async function bootstrap() {
   }
 }
 
-bootstrap();
+window.addEventListener("DOMContentLoaded", async () => {
+  await initSupabase();
+
+  const { data } = await supabase.auth.getSession();
+
+  if (data.session) {
+    currentUser = data.session.user;
+    setState("home");
+  } else {
+    setState("auth");
+  }
+});
 
 </script>
 
