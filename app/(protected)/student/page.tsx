@@ -1,146 +1,65 @@
-'use client';
+const grades = [6, 7, 8, 9, 10, 11, 12]
 
-import { useEffect, useState } from 'react';
-import { createClient, User } from '@supabase/supabase-js';
-
-type ExamHistoryItem = {
-  id: string;
-  created_at: string;
-  score: number | null;
-  total_questions: number | null;
-  status: string | null;
-};
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
-
-export default function StudentPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [history, setHistory] = useState<ExamHistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void loadStudentData();
-  }, []);
-
-  const loadStudentData = async () => {
-    setLoading(true);
-    setError(null);
-
-    const {
-      data: { user: authUser },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !authUser) {
-      setError(authError?.message || 'Không tìm thấy thông tin người dùng.');
-      setLoading(false);
-      return;
-    }
-
-    setUser(authUser);
-
-    const { data, error: examError } = await supabase
-      .from('exams')
-      .select('id, created_at, score, total_questions, status')
-      .eq('student_id', authUser.id)
-      .order('created_at', { ascending: false });
-
-    if (examError) {
-      setError(examError.message);
-    } else {
-      setHistory((data as ExamHistoryItem[]) || []);
-    }
-
-    setLoading(false);
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = '/';
-  };
+export default function Page() {
 
   return (
-    <main style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px' }}>
-      <h1>Student Dashboard</h1>
+    <main className="min-h-screen bg-slate-50 p-6 md:p-10">
+      <div className="mx-auto w-full max-w-3xl space-y-6">
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Student Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-500">Thông tin người dùng</p>
 
-      {loading && <p>Đang tải dữ liệu...</p>}
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Full name</p>
+              <p className="mt-1 text-base font-semibold text-slate-900">Nguyen Van A</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Email</p>
+              <p className="mt-1 text-base font-semibold text-slate-900">student@example.com</p>
+            </div>
+          </div>
+        </section>
 
-      {!loading && error && (
-        <p style={{ color: 'crimson' }}>Lỗi khi tải dữ liệu: {error}</p>
-      )}
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <label htmlFor="grade" className="text-sm font-medium text-slate-700">
+            Chọn lớp
+          </label>
+          <select
+            id="grade"
+            name="grade"
+            defaultValue="12"
+            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-400"
+          >
+            {grades.map((grade) => (
+              <option key={grade} value={grade}>
+                Grade {grade}
+              </option>
+            ))}
+          </select>
 
-      {!loading && !error && (
-        <>
-          <section style={{ marginBottom: 24 }}>
-            <h2>Thông tin sinh viên</h2>
-            <p>
-              <strong>User ID:</strong> {user?.id}
-            </p>
-            <p>
-              <strong>Email:</strong> {user?.email || 'N/A'}
-            </p>
-          </section>
-
-          <section style={{ marginBottom: 24 }}>
-            <h2>View history</h2>
-            {history.length === 0 ? (
-              <p>Chưa có bài thi nào đã submit.</p>
-            ) : (
-              <table
-                style={{
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  border: '1px solid #ddd',
-                }}
-              >
-                <thead>
-                  <tr>
-                    <th style={{ border: '1px solid #ddd', padding: 8 }}>Exam ID</th>
-                    <th style={{ border: '1px solid #ddd', padding: 8 }}>
-                      Submitted at
-                    </th>
-                    <th style={{ border: '1px solid #ddd', padding: 8 }}>Score</th>
-                    <th style={{ border: '1px solid #ddd', padding: 8 }}>Total</th>
-                    <th style={{ border: '1px solid #ddd', padding: 8 }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((exam) => (
-                    <tr key={exam.id}>
-                      <td style={{ border: '1px solid #ddd', padding: 8 }}>{exam.id}</td>
-                      <td style={{ border: '1px solid #ddd', padding: 8 }}>
-                        {new Date(exam.created_at).toLocaleString()}
-                      </td>
-                      <td style={{ border: '1px solid #ddd', padding: 8 }}>
-                        {exam.score ?? '-'}
-                      </td>
-                      <td style={{ border: '1px solid #ddd', padding: 8 }}>
-                        {exam.total_questions ?? '-'}
-                      </td>
-                      <td style={{ border: '1px solid #ddd', padding: 8 }}>
-                        {exam.status || '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </section>
-
-          <section style={{ display: 'flex', gap: 12 }}>
-            <button type="button" disabled title="Chưa làm generate exam">
-              Generate exam (coming soon)
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <button
+              type="button"
+              className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold tracking-wide text-white transition hover:bg-slate-800"
+            >
+              GENERATE EXAM
             </button>
-            <button type="button" onClick={handleLogout}>
-              Log out
+            <button
+              type="button"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold tracking-wide text-slate-900 transition hover:bg-slate-50"
+            >
+              VIEW HISTORY
             </button>
-          </section>
-        </>
-      )}
+            <button
+              type="button"
+              className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold tracking-wide text-red-700 transition hover:bg-red-100"
+            >
+              LOG OUT
+            </button>
+          </div>
+        </section>
+      </div>
     </main>
-  );
+  )
 }
