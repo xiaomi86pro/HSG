@@ -1,6 +1,46 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { supabaseClient } from "@/lib/supabase-client"
+
 const grades = [6, 7, 8, 9, 10, 11, 12]
 
+type Profile = {
+  name: string | null
+  role: string | null
+  level: number | null
+  exp: number | null
+}
+
 export default function Page() {
+  const [email, setEmail] = useState<string | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      const {
+        data: { user },
+      } = await supabaseClient.auth.getUser()
+
+      if (!user) {
+        setEmail(null)
+        setProfile(null)
+        return
+      }
+
+      setEmail(user.email ?? null)
+
+      const { data } = await supabaseClient
+        .from("profiles")
+        .select("name, role, level, exp")
+        .eq("id", user.id)
+        .single()
+
+      setProfile(data)
+    }
+
+    void loadUserInfo()
+  }, [])
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 md:p-10">
@@ -12,11 +52,13 @@ export default function Page() {
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Full name</p>
-              <p className="mt-1 text-base font-semibold text-slate-900">Nguyen Van A</p>
+              <p className="mt-1 text-base font-semibold text-slate-900">
+                {profile?.name ?? "-"} | Role: {profile?.role ?? "-"} | Level: {profile?.level ?? "-"} | Exp: {profile?.exp ?? "-"}
+              </p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Email</p>
-              <p className="mt-1 text-base font-semibold text-slate-900">student@example.com</p>
+              <p className="mt-1 text-base font-semibold text-slate-900">{email ?? "-"}</p>
             </div>
           </div>
         </section>
