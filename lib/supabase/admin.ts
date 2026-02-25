@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 export function createAdminClient() {
   if (typeof window !== 'undefined') {
-    throw new Error('Admin client must not be used in the browser')
+    throw new Error('Admin client cannot run in browser')
   }
 
   return createClient(
