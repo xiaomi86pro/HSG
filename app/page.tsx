@@ -19,11 +19,18 @@ export default function HomePage() {
     const init = async () => {
       try {
         const {
-          data: { user },
-          error: userError,
-        } = await supabaseBrowser.auth.getUser();
+          data: { session },
+        } = await supabaseBrowser.auth.getSession();
 
-        if (userError) throw userError;
+        if (!session?.user) {
+          if (isMounted) {
+            setUser(null);
+            setLoading(false);
+          }
+          return;
+        }
+
+        const user = session.user;
 
         if (!user) {
           if (isMounted) {
