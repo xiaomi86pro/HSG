@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseClient } from "@/lib/supabase-client";
+import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type Profile = {
   id: string;
   name: string;
-  role: "student" | "teacher" | "admin";
   level: number;
   exp: number;
 };
@@ -26,25 +25,27 @@ export default function StudentPage() {
     const init = async () => {
       const {
         data: { user },
-      } = await supabaseClient.auth.getUser();
+      } = await supabaseBrowser.auth.getUser();
 
       if (!user) {
         router.replace("/login");
         return;
       }
 
-      const { data, error } = await supabaseClient
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+      const role = user.app_metadata?.role;
 
-      if (error || !data) {
+      if (role !== "student") {
         router.replace("/");
         return;
       }
 
-      if (data.role !== "student") {
+      const { data, error } = await supabaseBrowser
+        .from("profiles")
+        .select("id, name, level, exp")
+        .eq("id", user.id)
+        .single();
+
+      if (error || !data) {
         router.replace("/");
         return;
       }
@@ -63,7 +64,7 @@ export default function StudentPage() {
 
     setSaving(true);
 
-    const { error } = await supabaseClient
+    const { error } = await supabaseBrowser
       .from("profiles")
       .update({ name: newName.trim() })
       .eq("id", profile.id);
