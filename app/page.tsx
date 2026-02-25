@@ -14,29 +14,46 @@ export default function HomePage() {
   const [role, setRole] = useState<Role | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const init = async () => {
-      const {
-        data: { user },
-      } = await supabaseClient.auth.getUser();
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabaseClient.auth.getUser();
 
-      if (!user) {
-        setUser(null);
-        setLoading(false);
-        return;
+        if (userError) throw userError;
+
+        if (!user) {
+          if (isMounted) {
+            setUser(null);
+            setLoading(false);
+          }
+          return;
+        }
+
+        const { data: roleData, error: roleError } =
+          await supabaseClient.rpc("get_my_role");
+
+        if (isMounted) {
+          setUser(user);
+          if (!roleError && roleData) {
+            setRole(roleData as Role);
+          }
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Init error:", err);
+        if (isMounted) setLoading(false);
       }
-
-      setUser(user);
-
-      const { data, error } = await supabaseClient.rpc("get_my_role");
-
-      if (!error && data) {
-        setRole(data as Role);
-      }
-
-      setLoading(false);
     };
 
     void init();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleLogout = async () => {

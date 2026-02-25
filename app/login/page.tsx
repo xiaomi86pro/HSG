@@ -17,18 +17,34 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMessage(null);
 
-    const { error } = await supabaseClient.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } =
+        await supabaseClient.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-    if (error) {
-      setErrorMessage(error.message);
+      if (error) {
+        setErrorMessage(error.message);
+        setLoading(false);
+        return;
+      }
+
+      if (!data.session) {
+        setErrorMessage("Không thể tạo session.");
+        setLoading(false);
+        return;
+      }
+
+      // đảm bảo session đã sync
+      await supabaseClient.auth.getSession();
+
+      router.replace("/");
+    } catch (err) {
+      console.error("Login error:", err);
+      setErrorMessage("Đã xảy ra lỗi khi đăng nhập.");
       setLoading(false);
-      return;
     }
-
-    router.replace("/");
   };
 
   return (

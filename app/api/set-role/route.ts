@@ -1,22 +1,69 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { createServerSupabase } from "@/lib/supabase/server"
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+type Role = "student" | "teacher" | "admin"
 
 export async function POST(req: Request) {
-  const { userId, role } = await req.json()
+  try {
+    const supabase = await createServerSupabase()
 
-  const { error } = await supabaseAdmin.auth.admin.updateUserById(
-    userId,
-    { app_metadata: { role } }
-  )
+    // 1️⃣ Xác thực user hiện tại
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 })
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
+    // 2️⃣ Lấy role hiện tại từ DB (không tin client)
+    const { data: currentRole } = await supabase.rpc("get_my_role")
+
+    if (currentRole !== "admin") {
+      return NextResponse.json(
+        { error: "Forbidden" },
+        { status: 403 }
+      )
+    }
+
+    // 3️⃣ Validate input
+    const { userId, role } = await req.json()
+
+    const allowedRoles: Role[] = ["student", "teacher", "admin"]
+
+    if (!allowedRoles.includes(role)) {
+      return NextResponse.json(
+        { error: "Invalid role" },
+        { status: 400 }
+      )
+    }
+
+    // 4️⃣ Dùng service role để update
+    const adminClient = createAdminClient()
+
+    const { error } =
+      await adminClient.auth.admin.updateUserById(userId, {
+        app_metadata: { role },
+      })
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    console.error("Set role error:", err)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
-
-  return NextResponse.json({ success: true })
 }
