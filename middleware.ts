@@ -20,13 +20,13 @@ export async function middleware(req: NextRequest) {
   )
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    data: { session },
+  } = await supabase.auth.getSession()
 
   const pathname = req.nextUrl.pathname
 
   // ===== Chưa login =====
-  if (!user) {
+  if (!session) {
     if (
       pathname.startsWith('/student') ||
       pathname.startsWith('/teacher') ||
@@ -37,15 +37,9 @@ export async function middleware(req: NextRequest) {
     return res
   }
 
-  // ===== Đã login → check role =====
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  const role = session.user.app_metadata?.role
 
-  const role = profile?.role
-
+  // ===== Đã login → route protection =====
   if (pathname.startsWith('/student') && role !== 'student') {
     return NextResponse.redirect(new URL('/', req.url))
   }
@@ -58,9 +52,20 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/', req.url))
   }
 
+  // ===== Nếu đã login mà vào /login hoặc /register =====
+  if (pathname === '/login' || pathname === '/register') {
+    return NextResponse.redirect(new URL(`/${role}`, req.url))
+  }
+
   return res
 }
 
 export const config = {
-  matcher: ['/student/:path*', '/teacher/:path*', '/admin/:path*'],
+  matcher: [
+    '/student/:path*',
+    '/teacher/:path*',
+    '/admin/:path*',
+    '/login',
+    '/register',
+  ],
 }
