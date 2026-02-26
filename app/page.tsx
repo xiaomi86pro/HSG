@@ -162,7 +162,7 @@ export default function HomePage() {
 
             </div>
           )}
-
+        </div>
         {/* RIGHT */}
         <div className="col-span-3 bg-white rounded-xl shadow p-6 flex flex-col items-center">
           <div className="w-24 h-24 rounded-full bg-slate-300 mb-4" />
@@ -199,7 +199,6 @@ export default function HomePage() {
           </div>
         </div>
         </div>
-      </div>
     </main>
   );
 }
