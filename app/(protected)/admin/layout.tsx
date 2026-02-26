@@ -22,10 +22,19 @@ export default function AdminLayout({
 
   useEffect(() => {
     const checkRole = async () => {
-      const { data, error } = await supabaseBrowser.rpc("get_my_role");
-      const role = data as Role | null;
+      const {
+        data: { user },
+        error,
+      } = await supabaseBrowser.auth.getUser();
 
-      if (error || !role || !(role in ROLE_TO_PATH)) {
+      if (error || !user) {
+        router.replace("/login");
+        return;
+      }
+
+      const role = user.app_metadata?.role as Role | undefined;
+
+      if (!role || !(role in ROLE_TO_PATH)) {
         router.replace("/login");
         return;
       }

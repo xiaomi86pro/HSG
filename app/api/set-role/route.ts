@@ -21,8 +21,8 @@ export async function POST(req: Request) {
       )
     }
 
-    // 2️⃣ Lấy role hiện tại từ DB (không tin client)
-    const { data: currentRole } = await supabase.rpc("get_my_role")
+    // 2️⃣ Check role từ JWT (không dùng RPC nữa)
+    const currentRole = user.app_metadata?.role
 
     if (currentRole !== "admin") {
       return NextResponse.json(
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // 4️⃣ Dùng service role để update
+    // 4️⃣ Dùng service role để update app_metadata
     const adminClient = createAdminClient()
 
     const { error } =

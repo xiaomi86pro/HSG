@@ -11,7 +11,6 @@ export default function HomePage() {
 
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const [role, setRole] = useState<Role | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -19,35 +18,20 @@ export default function HomePage() {
     const init = async () => {
       try {
         const {
-          data: { session },
-        } = await supabaseBrowser.auth.getSession();
+          data: { user },
+          error,
+        } = await supabaseBrowser.auth.getUser();
 
-        if (!session?.user) {
+        if (!user || error) {
           if (isMounted) {
             setUser(null);
             setLoading(false);
           }
           return;
         }
-
-        const user = session.user;
-
-        if (!user) {
-          if (isMounted) {
-            setUser(null);
-            setLoading(false);
-          }
-          return;
-        }
-
-        const { data: roleData, error: roleError } =
-          await supabaseBrowser.rpc("get_my_role");
 
         if (isMounted) {
           setUser(user);
-          if (!roleError && roleData) {
-            setRole(roleData as Role);
-          }
           setLoading(false);
         }
       } catch (err) {
@@ -103,6 +87,8 @@ export default function HomePage() {
     );
   }
 
+  const role = user.app_metadata?.role as Role | undefined;
+
   if (!role) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -118,7 +104,7 @@ export default function HomePage() {
     <main className="min-h-screen bg-slate-100 p-6">
       <div className="grid grid-cols-12 gap-6 h-[85vh]">
         
-        {/* LEFT - LEADERBOARD */}
+        {/* LEFT */}
         <div className="col-span-3 bg-white rounded-xl shadow p-4 flex flex-col">
           <h2 className="text-lg font-semibold mb-4 text-center">
             🏆 Leaderboard
@@ -129,7 +115,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* CENTER - MAIN */}
+        {/* CENTER */}
         <div className="col-span-6 bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center justify-center">
           <h2 className="text-2xl font-bold mb-6">
             Khu vực chính
@@ -146,7 +132,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* RIGHT - USER PANEL */}
+        {/* RIGHT */}
         <div className="col-span-3 bg-white rounded-xl shadow p-6 flex flex-col items-center">
           
           <div className="w-24 h-24 rounded-full bg-slate-300 mb-4" />
@@ -156,7 +142,7 @@ export default function HomePage() {
           </h3>
 
           <p className="text-sm text-slate-500 mb-6">
-            {role ? `Role: ${role}` : "Đang tải role..."}
+            {`Role: ${role}`}
           </p>
 
           <div className="w-full flex flex-col gap-3">
