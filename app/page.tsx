@@ -48,8 +48,8 @@ export default function HomePage() {
   }, []);
 
   const handleLogout = async () => {
-    await supabaseBrowser.auth.signOut();
-    router.replace("/");
+    await supabaseBrowser.auth.signOut({ scope: "local" });
+    window.location.href = "/";
   };
 
   if (loading) {
