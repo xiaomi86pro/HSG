@@ -24,12 +24,13 @@ export async function middleware(req: NextRequest) {
 
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser()
 
   const pathname = req.nextUrl.pathname
 
   // ===== Not logged in =====
-  if (!user) {
+  if (!user || error) {
     if (
       pathname.startsWith('/student') ||
       pathname.startsWith('/teacher') ||
@@ -46,14 +47,20 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/login', req.url))
   }
 
-  const protectedPrefix = pathname.split('/')[1]
+  // ===== Protected routes =====
+  if (
+    pathname.startsWith('/student') ||
+    pathname.startsWith('/teacher') ||
+    pathname.startsWith('/admin')
+  ) {
+    const prefix = pathname.split('/')[1]
 
-  if (['student', 'teacher', 'admin'].includes(protectedPrefix)) {
-    if (role !== protectedPrefix) {
+    if (role !== prefix) {
       return NextResponse.redirect(new URL('/', req.url))
     }
   }
 
+  // ===== Prevent accessing auth pages when logged in =====
   if (pathname === '/login' || pathname === '/register') {
     return NextResponse.redirect(new URL(`/${role}`, req.url))
   }
