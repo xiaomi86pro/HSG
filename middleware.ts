@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 export async function middleware(req: NextRequest) {
-  let response = NextResponse.next({
+  const response = NextResponse.next({
     request: {
       headers: req.headers,
     },
@@ -37,12 +37,13 @@ export async function middleware(req: NextRequest) {
 
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
 
   const pathname = req.nextUrl.pathname;
 
   // ===== Not logged in =====
-  if (!user) {
+  if (!user || error) {
     if (
       pathname.startsWith("/student") ||
       pathname.startsWith("/teacher") ||
