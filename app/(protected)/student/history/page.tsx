@@ -11,26 +11,49 @@ type Exam = {
 
 export default function StudentHistoryPage() {
   const router = useRouter();
+
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const init = async () => {
-      const { data } = await supabaseBrowser
-        .from("exams")
-        .select("id, created_at")
-        .order("created_at", { ascending: false });
+      try {
+        // 1️⃣ Check session trước
+        const {
+          data: { session },
+        } = await supabaseBrowser.auth.getSession();
 
-      if (data) {
-        setExams(data);
+        if (!session?.user) {
+          router.replace("/login");
+          return;
+        }
+
+        // 2️⃣ Fetch exams (RLS sẽ tự lọc theo user_id)
+        const { data, error } = await supabaseBrowser
+          .from("exams")
+          .select("id, created_at")
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          setError(error.message);
+          return;
+        }
+
+        setExams(data ?? []);
+      } catch (err) {
+        setError("Unexpected error");
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     void init();
-  }, []);
+  }, [router]);
 
+  // =============================
+  // LOADING
+  // =============================
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -39,6 +62,20 @@ export default function StudentHistoryPage() {
     );
   }
 
+  // =============================
+  // ERROR
+  // =============================
+  if (error) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-red-600">{error}</p>
+      </main>
+    );
+  }
+
+  // =============================
+  // UI
+  // =============================
   return (
     <main className="min-h-screen bg-slate-100 p-6">
       <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-8">
@@ -67,7 +104,9 @@ export default function StudentHistoryPage() {
                 </div>
 
                 <button
-                  onClick={() => router.push(`/student/exam/${exam.id}`)}
+                  onClick={() =>
+                    router.push(`/student/exam/${exam.id}`)
+                  }
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
                 >
                   Xem chi tiết

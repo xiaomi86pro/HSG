@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type Profile = {
@@ -11,8 +12,11 @@ type Profile = {
 };
 
 export default function StudentPage() {
+  const router = useRouter();
+
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const [editing, setEditing] = useState(false);
   const [newName, setNewName] = useState("");
@@ -20,27 +24,39 @@ export default function StudentPage() {
 
   useEffect(() => {
     const init = async () => {
-      const {
-        data: { user },
-      } = await supabaseBrowser.auth.getUser();
+      try {
+        const {
+          data: { session },
+        } = await supabaseBrowser.auth.getSession();
 
-      if (!user) return; // middleware đã đảm bảo auth
+        const user = session?.user;
 
-      const { data } = await supabaseBrowser
-        .from("profiles")
-        .select("id, name, level, exp")
-        .eq("id", user.id)
-        .single();
+        if (!user) {
+          router.replace("/login");
+          return;
+        }
 
-      if (data) {
+        const { data, error } = await supabaseBrowser
+          .from("profiles")
+          .select("id, name, level, exp")
+          .eq("id", user.id)
+          .single();
+
+        if (error) {
+          setError(error.message);
+          return;
+        }
+
         setProfile(data);
+      } catch (err) {
+        setError("Unexpected error");
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     void init();
-  }, []);
+  }, [router]);
 
   const handleSaveName = async () => {
     if (!profile) return;
@@ -61,6 +77,9 @@ export default function StudentPage() {
     setSaving(false);
   };
 
+  // =============================
+  // LOADING
+  // =============================
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -69,8 +88,31 @@ export default function StudentPage() {
     );
   }
 
-  if (!profile) return null;
+  // =============================
+  // ERROR
+  // =============================
+  if (error) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-red-600">{error}</p>
+      </main>
+    );
+  }
 
+  // =============================
+  // NO PROFILE
+  // =============================
+  if (!profile) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p>Profile not found.</p>
+      </main>
+    );
+  }
+
+  // =============================
+  // NORMAL UI
+  // =============================
   return (
     <main className="min-h-screen bg-slate-100 p-6">
       <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8">
