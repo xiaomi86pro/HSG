@@ -1,0 +1,163 @@
+SEQUENCE FLOW TOÀN BỘ HỆ THỐNG
+🎯 CASE 1 — Học sinh bắt đầu thi
+1️⃣ Student Login
+
+Frontend → Supabase Auth
+→ có auth.uid()
+
+2️⃣ Student chọn Grade 12
+
+Frontend gọi:
+
+get_exam_templates_by_grade(12)
+
+Query:
+
+select *
+from exam_templates
+where grade_level = 12
+order by created_at desc;
+3️⃣ Student chọn Template #1
+
+Frontend KHÔNG gọi generate ngay.
+
+Trước tiên gọi:
+
+check_in_progress_exam(template_id)
+Query:
+select id
+from exams
+where user_id = auth.uid()
+and exam_template_id = p_template_id
+and status = 'in_progress'
+limit 1;
+Nếu tồn tại:
+
+→ return exam_id
+→ redirect vào làm tiếp
+
+Nếu không tồn tại:
+
+→ gọi:
+
+generate_exam_from_template(p_template_id)
+🎯 CASE 2 — generate_exam_from_template
+Transaction bắt đầu
+STEP 1 — Insert exam instance
+insert into exams (
+    exam_template_id,
+    user_id,
+    grade_level,
+    status,
+    created_at
+)
+values (
+    p_template_id,
+    auth.uid(),
+    template.grade_level,
+    'in_progress',
+    now()
+)
+returning id into v_exam_id;
+STEP 2 — Lấy danh sách section
+select *
+from exam_template_sections
+where exam_template_id = p_template_id
+order by display_order;
+STEP 3 — Với mỗi section:
+
+Loop từng section:
+
+STEP 3.1 — Select random question
+select q.id
+from questions q
+join question_tags qt on qt.question_id = q.id
+where
+    q.grade_level = template.grade_level
+    and qt.skill_code = section.skill_code
+    and q.engine_type = section.engine_type
+    and q.id not in (
+        select eq.question_id
+        from exams e
+        join exam_questions eq on eq.exam_id = e.id
+        where e.user_id = auth.uid()
+        and e.created_at > now() - interval '1 day'
+    )
+order by random()
+limit section.question_count;
+STEP 3.2 — Fallback nếu không đủ
+
+Nếu số row < required_count:
+
+→ chạy lại query nhưng bỏ điều kiện chống trùng 1 ngày.
+
+STEP 3.3 — Insert vào exam_questions
+insert into exam_questions (
+    exam_id,
+    question_id,
+    section_id,
+    display_order
+)
+values (...)
+STEP 4 — Return exam_id
+
+Transaction commit.
+
+🎯 CASE 3 — Student reload
+
+Frontend gọi:
+
+get_exam_full(exam_id)
+Query:
+select
+    s.id as section_id,
+    s.title,
+    q.id as question_id,
+    q.content,
+    q.engine_type,
+    o.id as option_id,
+    o.content as option_content,
+    o.is_correct
+from exam_questions eq
+join questions q on q.id = eq.question_id
+join exam_template_sections s on s.id = eq.section_id
+left join options o on o.question_id = q.id
+where eq.exam_id = p_exam_id
+order by s.display_order, eq.display_order;
+🎯 CASE 4 — Submit
+
+RPC: submit_exam(p_exam_id)
+
+STEP 1 — Check status
+select status from exams where id = p_exam_id;
+
+Nếu submitted → reject.
+
+STEP 2 — Chấm điểm
+
+So sánh:
+
+selected_option_id
+
+question_text_answers
+
+STEP 3 — Update
+update exams
+set
+    status = 'submitted',
+    submitted_at = now(),
+    score = v_score
+where id = p_exam_id;
+
+
+Thêm exam_template_id vào exams
+
+ Thêm index (user_id, exam_template_id, created_at)
+
+ Kiểm tra generate_exam có role guard
+
+ Kiểm tra generate_exam có transaction
+
+ Xác nhận student không thể query full question bank nếu không mong muốn
+
+ Xác nhận teacher không thể xem exam của student nếu không cần
