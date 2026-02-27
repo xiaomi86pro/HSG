@@ -18,6 +18,9 @@ export default function HomePage() {
       const {
         data: { session },
       } = await supabaseBrowser.auth.getSession();
+      console.log("=== HOMEPAGE SESSION ===");
+console.log(session);
+console.log("user:", session?.user);
 
       const user = session?.user ?? null;
 

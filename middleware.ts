@@ -39,6 +39,11 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
+  console.log("=== MIDDLEWARE SESSION ===");
+console.log("session:", session);
+console.log("user:", session?.user);
+console.log("access_token:", session?.access_token);
+
   const pathname = req.nextUrl.pathname;
 
   // ===== Not logged in =====
@@ -54,6 +59,7 @@ export async function middleware(req: NextRequest) {
   }
 
   const role = (session.user as any)?.role;
+  console.log("role from user:", role);
 
   if (!role) {
     return NextResponse.redirect(new URL("/login", req.url));
