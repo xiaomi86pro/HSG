@@ -22,14 +22,6 @@ export default function HomePage() {
       console.log(session);
       console.log("user:", session?.user);
 
-      if (session?.access_token) {
-        const payload = JSON.parse(
-          Buffer.from(session.access_token.split(".")[1], "base64").toString()
-        );
-
-        console.log("JWT PAYLOAD:", payload);
-      }
-
       const user = session?.user ?? null;
 
       if (!user) {
