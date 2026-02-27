@@ -150,14 +150,3 @@ set
 where id = p_exam_id;
 
 
-Thêm exam_template_id vào exams
-
- Thêm index (user_id, exam_template_id, created_at)
-
- Kiểm tra generate_exam có role guard
-
- Kiểm tra generate_exam có transaction
-
- Xác nhận student không thể query full question bank nếu không mong muốn
-
- Xác nhận teacher không thể xem exam của student nếu không cần

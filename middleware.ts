@@ -36,14 +36,13 @@ export async function middleware(req: NextRequest) {
   );
 
   const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
   const pathname = req.nextUrl.pathname;
 
   // ===== Not logged in =====
-  if (!user || error) {
+  if (!session) {
     if (
       pathname.startsWith("/student") ||
       pathname.startsWith("/teacher") ||
@@ -54,7 +53,7 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  const role = user.app_metadata?.role;
+  const role = (session.user as any)?.role;
 
   if (!role) {
     return NextResponse.redirect(new URL("/login", req.url));

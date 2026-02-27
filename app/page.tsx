@@ -16,8 +16,10 @@ export default function HomePage() {
   useEffect(() => {
     const init = async () => {
       const {
-        data: { user },
-      } = await supabaseBrowser.auth.getUser();
+        data: { session },
+      } = await supabaseBrowser.auth.getSession();
+
+      const user = session?.user ?? null;
 
       if (!user) {
         setUser(null);
@@ -28,7 +30,9 @@ export default function HomePage() {
       setUser(user);
 
       // Chỉ check pending exam nếu là student
-      if (user.app_metadata?.role === "student") {
+      const role = (user as any)?.role as Role | undefined;
+
+      if (role === "student") {
         const { data } = await supabaseBrowser
           .from("exams")
           .select("id")
@@ -87,7 +91,7 @@ export default function HomePage() {
     );
   }
 
-  const role = user.app_metadata?.role as Role | undefined;
+  const role = (user as any)?.role as Role | undefined;
 
   // =============================
   // ĐÃ LOGIN
