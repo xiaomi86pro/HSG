@@ -33,7 +33,7 @@ export default function HomePage() {
       if (session.access_token) {
         const base64 = session.access_token.split(".")[1];
         const payload = JSON.parse(atob(base64));
-        const jwtRole = payload.role as Role | undefined;
+        const jwtRole = payload.app_role as Role | undefined;
 
         if (jwtRole) {
           setRole(jwtRole);

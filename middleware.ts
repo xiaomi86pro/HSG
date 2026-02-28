@@ -68,7 +68,7 @@ console.log("access_token:", session?.access_token);
         ).toString()
       );
 
-      role = payload.role;
+      role = payload.app_role;
     }
 
     console.log("ROLE FROM JWT:", role);
